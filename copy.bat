@@ -1,0 +1,1 @@
+XCOPY sigfunction C:\Users\Victor\AppData\Roaming\QGIS\QGIS3\profiles\default\python\plugins\sigfunction /e/y

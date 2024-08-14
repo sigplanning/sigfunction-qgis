@@ -1,0 +1,48 @@
+# This file contains metadata for your plugin.
+
+# This file should be included when you package your plugin.# Mandatory items:
+
+[general]
+name=SIGfunction
+qgisMinimumVersion=3.0
+description=SIGfunction uses a mathematical expression to transform the natural scale that measures the state of a territory attribute to a value scale between zero and one, which represents a gradient from an anti-ideal state to an ideal one according to its contribution to compliance. of the objective or goal (0 representing the most undesirable condition and 1 the most desirable
+
+version=0.1
+author=Víctor Hernández Díaz / UNAM-LANCIS-APC
+email=victorhdzgeo@gmail.com
+
+about=SIGfunction uses a mathematical expression to transform the natural scale that measures the state of a territory attribute to a value scale between zero and one, which represents a gradient from an anti-ideal state to an ideal one according to its contribution to compliance. of the objective or goal (0 representing the most undesirable condition and 1 the most desirable
+
+tracker=https://github.com/sigplanning/sigfunction-qgis
+repository=https://github.com/sigplanning/sigfunction-qgis
+# End of mandatory metadata
+
+# Recommended items:
+
+hasProcessingProvider=no
+# Uncomment the following line and add your changelog:
+# changelog=
+
+# Tags are comma separated with spaces allowed
+tags=GIS-MCDA, ecological planning, environmental impact assessment , sensitivity analysis
+
+homepage=http://www.apc.lancis.ecologia.unam.mx/sigplanning
+category=Plugins
+icon=icon.png
+# experimental flag
+experimental=False
+
+# deprecated flag (applies to the whole plugin, not just a single version)
+deprecated=False
+
+# Since QGIS 3.8, a comma separated list of plugins to be installed
+# (or upgraded) can be specified.
+# Check the documentation for more information.
+# plugin_dependencies=
+
+Category of the plugin: Raster, Vector, Database or Web
+# category=
+
+# If the plugin can run on QGIS Server.
+server=False
+
