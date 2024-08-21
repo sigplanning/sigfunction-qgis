@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>473</width>
-    <height>923</height>
+    <width>484</width>
+    <height>815</height>
    </rect>
   </property>
   <property name="font">
@@ -30,7 +30,10 @@
        </font>
       </property>
       <property name="currentIndex">
-       <number>0</number>
+       <number>1</number>
+      </property>
+      <property name="tabBarAutoHide">
+       <bool>true</bool>
       </property>
       <widget class="QWidget" name="Intro">
        <attribute name="title">
@@ -59,13 +62,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
       </widget>
       <widget class="QWidget" name="function">
        <attribute name="title">
-        <string>Function</string>
+        <string>Función</string>
        </attribute>
        <widget class="QComboBox" name="selectFV">
         <property name="geometry">
          <rect>
           <x>30</x>
-          <y>150</y>
+          <y>130</y>
           <width>281</width>
           <height>22</height>
          </rect>
@@ -77,6 +80,11 @@ li.checked::marker { content: &quot;\2612&quot;; }
           <bold>true</bold>
          </font>
         </property>
+        <item>
+         <property name="text">
+          <string>Seleccione una función de valor...</string>
+         </property>
+        </item>
         <item>
          <property name="text">
           <string>Lineal</string>
@@ -102,17 +110,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
           <string>Campana</string>
          </property>
         </item>
-        <item>
-         <property name="text">
-          <string>Coseno</string>
-         </property>
-        </item>
        </widget>
        <widget class="QCheckBox" name="decreciente">
         <property name="geometry">
          <rect>
           <x>320</x>
-          <y>150</y>
+          <y>130</y>
           <width>111</width>
           <height>20</height>
          </rect>
@@ -164,26 +167,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <set>Qt::AlignCenter</set>
         </property>
        </widget>
-       <widget class="QLabel" name="label_select_fv">
-        <property name="geometry">
-         <rect>
-          <x>30</x>
-          <y>120</y>
-          <width>231</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>12</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string>Seleccione función de valor</string>
-        </property>
-       </widget>
        <widget class="QLineEdit" name="v_min">
         <property name="geometry">
          <rect>
@@ -231,19 +214,6 @@ li.checked::marker { content: &quot;\2612&quot;; }
         </property>
         <property name="readOnly">
          <bool>false</bool>
-        </property>
-       </widget>
-       <widget class="QGraphicsView" name="show_graph">
-        <property name="geometry">
-         <rect>
-          <x>40</x>
-          <y>250</y>
-          <width>371</width>
-          <height>291</height>
-         </rect>
-        </property>
-        <property name="cacheMode">
-         <set>QGraphicsView::CacheBackground</set>
         </property>
        </widget>
        <widget class="QLabel" name="label_min">
@@ -299,7 +269,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
-       <widget class="QLabel" name="label_centro">
+       <widget class="QLabel" name="label_centro_opt">
         <property name="geometry">
          <rect>
           <x>30</x>
@@ -322,7 +292,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <set>Qt::AlignCenter</set>
         </property>
        </widget>
-       <widget class="QLabel" name="label_sat">
+       <widget class="QLabel" name="label_sat_amp">
         <property name="geometry">
          <rect>
           <x>170</x>
@@ -345,7 +315,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <set>Qt::AlignCenter</set>
         </property>
        </widget>
-       <widget class="QDoubleSpinBox" name="v_centro">
+       <widget class="QDoubleSpinBox" name="v_centro_opt">
         <property name="geometry">
          <rect>
           <x>30</x>
@@ -371,7 +341,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <double>10000000.000000000000000</double>
         </property>
        </widget>
-       <widget class="QDoubleSpinBox" name="v_sat">
+       <widget class="QDoubleSpinBox" name="v_sat_amp">
         <property name="geometry">
          <rect>
           <x>169</x>
@@ -390,34 +360,20 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <property name="decimals">
          <number>1</number>
         </property>
+        <property name="minimum">
+         <double>1.000000000000000</double>
+        </property>
         <property name="maximum">
-         <double>20.000000000000000</double>
+         <double>30.000000000000000</double>
         </property>
         <property name="singleStep">
          <double>0.500000000000000</double>
         </property>
-       </widget>
-       <widget class="QLabel" name="v_centro_ant">
-        <property name="geometry">
-         <rect>
-          <x>30</x>
-          <y>250</y>
-          <width>121</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>12</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string/>
+        <property name="value">
+         <double>10.000000000000000</double>
         </property>
        </widget>
-       <widget class="QLabel" name="v_sat_ant">
+       <widget class="QLabel" name="v_sat_amp_ant">
         <property name="geometry">
          <rect>
           <x>170</x>
@@ -437,13 +393,13 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <string/>
         </property>
        </widget>
-       <widget class="QLabel" name="label_opt">
+       <widget class="QLabel" name="v_centro_opt_ant">
         <property name="geometry">
          <rect>
           <x>30</x>
-          <y>180</y>
+          <y>250</y>
           <width>121</width>
-          <height>20</height>
+          <height>16</height>
          </rect>
         </property>
         <property name="font">
@@ -454,128 +410,66 @@ li.checked::marker { content: &quot;\2612&quot;; }
          </font>
         </property>
         <property name="text">
-         <string>Óptimo</string>
-        </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
+         <string/>
         </property>
        </widget>
-       <widget class="QDoubleSpinBox" name="v_opt">
+       <widget class="QWidget" name="verticalLayoutWidget">
         <property name="geometry">
          <rect>
-          <x>30</x>
-          <y>210</y>
-          <width>121</width>
-          <height>25</height>
+          <x>20</x>
+          <y>290</y>
+          <width>411</width>
+          <height>281</height>
          </rect>
         </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>12</pointsize>
-          <bold>true</bold>
-         </font>
+        <layout class="QVBoxLayout" name="layout_graph"/>
+       </widget>
+       <widget class="QPushButton" name="pushButton">
+        <property name="geometry">
+         <rect>
+          <x>130</x>
+          <y>590</y>
+          <width>181</width>
+          <height>24</height>
+         </rect>
         </property>
-        <property name="decimals">
-         <number>1</number>
+        <property name="locale">
+         <locale language="Spanish" country="Mexico"/>
         </property>
-        <property name="minimum">
-         <double>-10000000.000000000000000</double>
-        </property>
-        <property name="maximum">
-         <double>10000000.000000000000000</double>
+        <property name="text">
+         <string>Generar función de valor</string>
         </property>
        </widget>
-       <widget class="QDoubleSpinBox" name="v_amp">
-        <property name="enabled">
+       <widget class="QCheckBox" name="loadproj">
+        <property name="geometry">
+         <rect>
+          <x>50</x>
+          <y>630</y>
+          <width>141</width>
+          <height>20</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Cargar al proyecto</string>
+        </property>
+        <property name="checked">
          <bool>true</bool>
         </property>
-        <property name="geometry">
-         <rect>
-          <x>169</x>
-          <y>210</y>
-          <width>121</width>
-          <height>25</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>11</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="decimals">
-         <number>1</number>
-        </property>
-        <property name="maximum">
-         <double>20.000000000000000</double>
-        </property>
-        <property name="singleStep">
-         <double>0.500000000000000</double>
-        </property>
        </widget>
-       <widget class="QLabel" name="v_amp_ant">
+       <widget class="QCheckBox" name="savefig">
         <property name="geometry">
          <rect>
-          <x>170</x>
-          <y>250</y>
-          <width>121</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>12</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-       <widget class="QLabel" name="v_opt_ant">
-        <property name="geometry">
-         <rect>
-          <x>30</x>
-          <y>250</y>
-          <width>121</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>12</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-       <widget class="QLabel" name="label_amp">
-        <property name="geometry">
-         <rect>
-          <x>170</x>
-          <y>180</y>
-          <width>121</width>
+          <x>250</x>
+          <y>630</y>
+          <width>131</width>
           <height>20</height>
          </rect>
         </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>12</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
         <property name="text">
-         <string>Amplitud</string>
+         <string>Guardar figura</string>
         </property>
-        <property name="alignment">
-         <set>Qt::AlignCenter</set>
+        <property name="checked">
+         <bool>true</bool>
         </property>
        </widget>
       </widget>

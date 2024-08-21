@@ -24,15 +24,44 @@
 """
 
 import os
+from .fv import *
+import math
+import numpy as np
 from qgis.core import QgsMapLayerProxyModel,QgsRasterBandStats
 from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
 from qgis.PyQt.QtGui import QPixmap,QImage, QBrush
 from qgis.PyQt.QtWidgets import QAction, QGraphicsView, QGraphicsScene, QGraphicsPixmapItem
+# graphs
+
+import matplotlib
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib import colors
+from matplotlib.figure import Figure
+matplotlib.use("QT5Agg")
+
+#simbologia
+
+from qgis.core import (
+    QgsColorRampShader,
+    QgsRasterShader,
+    QgsSingleBandPseudoColorRenderer,
+    QgsRasterLayer
+)
+from qgis.PyQt.QtGui import QColor
+
 
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'sigfunction_dockwidget_base.ui'))
 
+
+### grafica ###
+
+class MplCanvas(FigureCanvasQTAgg):
+    def __init__(self, parent=None, width = 5, height= 4,dpi=100):
+        fig = Figure(figsize=(width,height),dpi=dpi)
+        self.axes = fig.add_subplot(111)
+        super().__init__(fig)
 
 class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
@@ -49,27 +78,24 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         self.r_layer.setFilters(QgsMapLayerProxyModel.RasterLayer) #Muestra solo las capas raster en la lista
         self.r_layer.layerChanged.connect(self.min_max)  #Reñal de capa cambiada
-        self.r_layer.layerChanged.connect(self.data_fv)
+        self.r_layer.layerChanged.connect(self.reset_selectFV)
         self.selectFV.currentIndexChanged.connect(self.data_fv)
+        self.decreciente.toggled.connect(self.data_fv)
+
         status = False
-        self.label_centro.setVisible(status)
-        self.v_centro.setVisible(status)
-        self.v_centro_ant.setVisible(status)
+        self.label_centro_opt.setVisible(status)
+        self.v_centro_opt.setVisible(status)
+        self.v_centro_opt_ant.setVisible(status)
+        self.label_sat_amp.setVisible(status)
+        self.v_sat_amp.setVisible(status)
+        self.v_sat_amp_ant.setVisible(status)
 
-        self.label_sat.setVisible(status)
-        self.v_sat.setVisible(status)
-        self.v_sat_ant.setVisible(status)
+        self.v_sat_amp.valueChanged.connect(self.data_fv)
+        self.v_centro_opt.valueChanged.connect(self.data_fv)
 
-        self.label_opt.setVisible(status)
-        self.v_opt.setVisible(status)
-        self.v_opt_ant.setVisible(status)
-
-        self.label_amp.setVisible(status)
-        self.v_amp.setVisible(status)
-        self.v_amp_ant.setVisible(status)
         
-
     def min_max(self):
+        
         rlayer = self.r_layer.currentLayer()
         extent = rlayer.extent()
         provider = rlayer.dataProvider()
@@ -83,78 +109,137 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.v_min.setText(str(round(value_min,3)))
         self.v_max.setText(str(round(value_max,3)))
         return [value_min,value_max]
+    def plot_g(self,x,y):
+        ## Prueba grafica
+        sr = MplCanvas(self,width=5,height=5,dpi=100)
+        sr.axes.plot(x,y,color='black')
+        if self.layout_graph.count() >0:
+           self.layout_graph.removeItem(self.layout_graph.itemAt(0))
+        return self.layout_graph.addWidget(sr)
+    def reset_plot_g(self):
+        ## Prueba grafica
+        sr = MplCanvas(self,width=5,height=4,dpi=100)
+        if self.layout_graph.count() >0:
+           for i in range(self.layout_graph.count()):
+            self.layout_graph.removeItem(self.layout_graph.itemAt(i))
+        return self.layout_graph.addWidget(sr)
+
+    def reset_selectFV(self):
+        self.selectFV.setCurrentIndex(0)
+        status = False
+        self.label_centro_opt.setVisible(status)
+        self.v_centro_opt.setVisible(status)
+        self.v_centro_opt_ant.setVisible(status)
+        self.label_sat_amp.setVisible(status)
+        self.v_sat_amp.setVisible(status)
+        self.v_sat_amp_ant.setVisible(status)
+        self.decreciente.setChecked(False)
+        self.reset_plot_g()
+
+    def set_style(self,X_data,Y_data):
+        # Definir los colores en formato hexadecimal
+        st = QgsColorRampShader()
+        st.setColorRampType(QgsColorRampShader.Discrete)
+        rampa = colors.LinearSegmentedColormap.from_list("fv", ["#ffee7e","#faaf3c","#f35864","#c9008c","#691e91"], N=100)
+        color_items  = []
+
+        for range_value in zip(Y_data[:-1],Y_data[1:],X_data[:-1],X_data[1:]):
+            fv_min = range_value[0]
+            fv_max = range_value[1]
+            X_min = range_value[2]
+            X_max = range_value[3]
+            myLabel = str(round(X_min,1)) + " - " + str(round(X_max,1))
+            insideInterval = fv_min + ((fv_max - fv_min)/2.0)
+            rgba = [int(round(255*v, 0)) for v in rampa(insideInterval)]
+            myColour = QtGui.QColor.fromRgb(rgba[0],rgba[1],rgba[2],rgba[3])
+            color_items.append(QgsColorRampShader.ColorRampItem(X_max, myColour,myLabel))
+        st.setColorRampItemList(color_items)
+
+        # Crear y aplicar el shader raster
+        raster_shader = QgsRasterShader()
+        raster_shader.setRasterShaderFunction(st)
+        # Aplicar el renderer
+        renderer = QgsSingleBandPseudoColorRenderer(self.r_layer.currentLayer().dataProvider(), 1, raster_shader)
+        self.r_layer.currentLayer().setRenderer(renderer)
+
+        # Actualizar la capa para aplicar los cambios
+        self.r_layer.currentLayer().triggerRepaint()
+
+        if not self.r_layer.currentLayer().isValid():
+            pass
+
 
     def data_fv(self):
         xmin,xmax= self.min_max()
         xmean = (xmax+xmin)/2
-        if self.selectFV.currentText()=='Logística':
+        X = np.linspace(xmin,xmax,100)
+        self.decreciente.setText("Decreciente")
+        if self.selectFV.currentText()=='Lineal':
+            
+            status = False
+            self.v_centro_opt.setValue(round(xmean,1))
+            self.label_centro_opt.setVisible(status)
+            self.v_centro_opt.setVisible(status)
+            self.v_centro_opt_ant.setVisible(status)
+            self.label_sat_amp.setVisible(status)
+            self.v_sat_amp.setVisible(status)
+            self.v_sat_amp_ant.setVisible(status)
+            Y = lineal(X,self.decreciente.isChecked())
+            self.plot_g(X,Y)
+            self.set_style(X,Y)
+        elif self.selectFV.currentText()=='Logística':
             status = True
-            self.v_centro.setValue(round(xmean,1))
-            self.label_centro.setVisible(status)
-            self.v_centro.setVisible(status)
-            self.v_centro_ant.setVisible(status)
-            self.label_sat.setVisible(status)
-            self.v_sat.setVisible(status)
-            self.v_sat_ant.setVisible(status)
-            status_ = False
-            self.label_opt.setVisible(status_)
-            self.v_opt.setVisible(status_)
-            self.v_opt_ant.setVisible(status_)
-            self.label_amp.setVisible(status_)
-            self.v_amp.setVisible(status_)
-            self.v_amp_ant.setVisible(status_)
+            self.label_centro_opt.setVisible(status)
+            self.label_centro_opt.setText("Centro")
+            self.v_centro_opt.setVisible(status)
+            self.v_centro_opt_ant.setVisible(status)
+            self.label_sat_amp.setVisible(status)
+            self.label_sat_amp.setText("Saturación")
+            self.v_sat_amp.setVisible(status)
+            self.v_sat_amp_ant.setVisible(status)
+            Y=logistica(X,self.v_centro_opt.value(),xmin,xmax,alpha=self.v_sat_amp.value(),dec=self.decreciente.isChecked())
+            self.plot_g(X,Y)
+            self.set_style(X,Y)
+
 
         elif self.selectFV.currentText()=='Cóncava' or self.selectFV.currentText()=='Convexa':
-            status_ = False
-            self.label_centro.setVisible(status_)
-            self.v_centro.setVisible(status_)
-            self.v_centro_ant.setVisible(status_)
-            self.label_opt.setVisible(status_)
-            self.v_opt.setVisible(status_)
-            self.v_opt_ant.setVisible(status_)
-            
-            self.label_amp.setVisible(status_)
-            self.v_amp.setVisible(status_)
-            self.v_amp_ant.setVisible(status_)
+            status_=False
+            self.label_centro_opt.setVisible(status_)
+            self.v_centro_opt.setVisible(status_)
+            self.v_centro_opt_ant.setVisible(status_)
+            self.label_sat_amp.setVisible(status_)
             status = True
-            self.label_sat.setVisible(status)
-            self.v_sat.setVisible(status)
-            self.v_sat_ant.setVisible(status)
+            self.label_sat_amp.setVisible(status)
+            self.label_sat_amp.setText("Saturación")
+            self.v_sat_amp.setVisible(status)
+            self.v_sat_amp_ant.setVisible(status)
+            if self.selectFV.currentText()=='Convexa':
+                Y= convexa(X,self.v_sat_amp.value(),dec=self.decreciente.isChecked())
+                self.plot_g(X,Y)
+                self.set_style(X,Y)
+
+            if self.selectFV.currentText()=='Cóncava':
+                Y= concava(X,self.v_sat_amp.value(),dec=self.decreciente.isChecked())
+                self.plot_g(X,Y)
+                self.set_style(X,Y)
+
         elif self.selectFV.currentText()=='Campana': 
-            status = False
-            self.v_centro.setValue(round(xmean,1))
-            self.label_centro.setVisible(status)
-            self.v_centro.setVisible(status)
-            self.v_centro_ant.setVisible(status)
-            self.label_sat.setVisible(status)
-            self.v_sat.setVisible(status)
-            self.v_sat_ant.setVisible(status)
-            status_ =True
-            self.v_opt.setValue(round(xmean,1))
-            self.label_opt.setVisible(status_)
-            self.v_opt.setVisible(status_)
-            self.v_opt_ant.setVisible(status_)
-        
-            self.label_amp.setVisible(status_)
-            self.v_amp.setVisible(status_)
-            self.v_amp_ant.setVisible(status_)
+            self.decreciente.setText("Invertida")
+            status = True
+            self.label_centro_opt.setText("Óptimo")
+            self.label_centro_opt.setVisible(status)
+            self.v_centro_opt.setVisible(status)
+            self.v_centro_opt_ant.setVisible(status)
+            self.label_sat_amp.setText("Amplitud")
+            self.label_sat_amp.setVisible(status)
+            self.v_sat_amp.setVisible(status)
+            self.v_sat_amp_ant.setVisible(status)
+            Y=campana(X,self.v_centro_opt.value(),xmin,xmax,alpha=self.v_sat_amp.value(),dec=self.decreciente.isChecked())
+            self.plot_g(X,Y)
+            self.set_style(X,Y)
         else:
-            status = False
-            self.v_centro.setValue(round(xmean,1))
-            self.label_centro.setVisible(status)
-            self.v_centro.setVisible(status)
-            self.v_centro_ant.setVisible(status)
-            self.label_sat.setVisible(status)
-            self.v_sat.setVisible(status)
-            self.v_sat_ant.setVisible(status)
-        
-            self.label_opt.setVisible(status)
-            self.v_opt.setVisible(status)
-            self.v_opt_ant.setVisible(status)
-        
-            self.label_amp.setVisible(status)
-            self.v_amp.setVisible(status)
-            self.v_amp_ant.setVisible(status)
+            self.v_centro_opt.setValue(round(xmean,1))
+
 
 
     def closeEvent(self, event):
