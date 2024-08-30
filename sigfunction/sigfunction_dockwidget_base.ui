@@ -2,12 +2,15 @@
 <ui version="4.0">
  <class>SigFunctionDockWidgetBase</class>
  <widget class="QDockWidget" name="SigFunctionDockWidgetBase">
+  <property name="windowModality">
+   <enum>Qt::WindowModal</enum>
+  </property>
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>484</width>
-    <height>815</height>
+    <width>487</width>
+    <height>823</height>
    </rect>
   </property>
   <property name="font">
@@ -19,8 +22,14 @@
    <string>SIGfunction</string>
   </property>
   <widget class="QWidget" name="slides">
+   <property name="layoutDirection">
+    <enum>Qt::LeftToRight</enum>
+   </property>
+   <property name="autoFillBackground">
+    <bool>true</bool>
+   </property>
    <layout class="QGridLayout" name="gridLayout">
-    <item row="1" column="0">
+    <item row="0" column="0">
      <widget class="QTabWidget" name="tabWidget">
       <property name="font">
        <font>
@@ -28,6 +37,9 @@
         <pointsize>12</pointsize>
         <bold>true</bold>
        </font>
+      </property>
+      <property name="autoFillBackground">
+       <bool>true</bool>
       </property>
       <property name="currentIndex">
        <number>1</number>
@@ -61,6 +73,9 @@ li.checked::marker { content: &quot;\2612&quot;; }
        </widget>
       </widget>
       <widget class="QWidget" name="function">
+       <property name="autoFillBackground">
+        <bool>true</bool>
+       </property>
        <attribute name="title">
         <string>Función</string>
        </attribute>
@@ -116,7 +131,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <rect>
           <x>320</x>
           <y>130</y>
-          <width>111</width>
+          <width>121</width>
           <height>20</height>
          </rect>
         </property>
@@ -142,6 +157,12 @@ li.checked::marker { content: &quot;\2612&quot;; }
           <width>411</width>
           <height>25</height>
          </rect>
+        </property>
+        <property name="layoutDirection">
+         <enum>Qt::LeftToRight</enum>
+        </property>
+        <property name="autoFillBackground">
+         <bool>true</bool>
         </property>
        </widget>
        <widget class="QLabel" name="label_max">
@@ -273,7 +294,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <property name="geometry">
          <rect>
           <x>30</x>
-          <y>180</y>
+          <y>160</y>
           <width>121</width>
           <height>20</height>
          </rect>
@@ -296,7 +317,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <property name="geometry">
          <rect>
           <x>170</x>
-          <y>180</y>
+          <y>160</y>
           <width>121</width>
           <height>20</height>
          </rect>
@@ -319,7 +340,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <property name="geometry">
          <rect>
           <x>30</x>
-          <y>210</y>
+          <y>190</y>
           <width>121</width>
           <height>25</height>
          </rect>
@@ -345,7 +366,7 @@ li.checked::marker { content: &quot;\2612&quot;; }
         <property name="geometry">
          <rect>
           <x>169</x>
-          <y>210</y>
+          <y>190</y>
           <width>121</width>
           <height>25</height>
          </rect>
@@ -373,65 +394,35 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <double>10.000000000000000</double>
         </property>
        </widget>
-       <widget class="QLabel" name="v_sat_amp_ant">
-        <property name="geometry">
-         <rect>
-          <x>170</x>
-          <y>250</y>
-          <width>121</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>12</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
-       <widget class="QLabel" name="v_centro_opt_ant">
-        <property name="geometry">
-         <rect>
-          <x>30</x>
-          <y>250</y>
-          <width>121</width>
-          <height>16</height>
-         </rect>
-        </property>
-        <property name="font">
-         <font>
-          <family>Calibri</family>
-          <pointsize>12</pointsize>
-          <bold>true</bold>
-         </font>
-        </property>
-        <property name="text">
-         <string/>
-        </property>
-       </widget>
        <widget class="QWidget" name="verticalLayoutWidget">
         <property name="geometry">
          <rect>
-          <x>20</x>
-          <y>290</y>
-          <width>411</width>
-          <height>281</height>
+          <x>10</x>
+          <y>230</y>
+          <width>431</width>
+          <height>251</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="layout_graph"/>
        </widget>
-       <widget class="QPushButton" name="pushButton">
+       <widget class="QPushButton" name="creafunc">
         <property name="geometry">
          <rect>
-          <x>130</x>
-          <y>590</y>
-          <width>181</width>
+          <x>140</x>
+          <y>490</y>
+          <width>191</width>
           <height>24</height>
          </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Calibri</family>
+          <pointsize>12</pointsize>
+          <bold>true</bold>
+         </font>
+        </property>
+        <property name="styleSheet">
+         <string notr="true"/>
         </property>
         <property name="locale">
          <locale language="Spanish" country="Mexico"/>
@@ -443,11 +434,18 @@ li.checked::marker { content: &quot;\2612&quot;; }
        <widget class="QCheckBox" name="loadproj">
         <property name="geometry">
          <rect>
-          <x>50</x>
-          <y>630</y>
+          <x>160</x>
+          <y>510</y>
           <width>141</width>
-          <height>20</height>
+          <height>31</height>
          </rect>
+        </property>
+        <property name="font">
+         <font>
+          <family>Calibri</family>
+          <pointsize>12</pointsize>
+          <bold>false</bold>
+         </font>
         </property>
         <property name="text">
          <string>Cargar al proyecto</string>
@@ -456,20 +454,20 @@ li.checked::marker { content: &quot;\2612&quot;; }
          <bool>true</bool>
         </property>
        </widget>
-       <widget class="QCheckBox" name="savefig">
+       <widget class="QPushButton" name="guarda_fig">
         <property name="geometry">
          <rect>
-          <x>250</x>
-          <y>630</y>
-          <width>131</width>
-          <height>20</height>
+          <x>330</x>
+          <y>190</y>
+          <width>101</width>
+          <height>24</height>
          </rect>
         </property>
-        <property name="text">
-         <string>Guardar figura</string>
+        <property name="locale">
+         <locale language="Spanish" country="Mexico"/>
         </property>
-        <property name="checked">
-         <bool>true</bool>
+        <property name="text">
+         <string>Guardar fig</string>
         </property>
        </widget>
       </widget>
@@ -485,6 +483,18 @@ li.checked::marker { content: &quot;\2612&quot;; }
    <header>qgsmaplayercombobox.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>r_layer</tabstop>
+  <tabstop>v_min</tabstop>
+  <tabstop>v_max</tabstop>
+  <tabstop>selectFV</tabstop>
+  <tabstop>decreciente</tabstop>
+  <tabstop>v_centro_opt</tabstop>
+  <tabstop>v_sat_amp</tabstop>
+  <tabstop>creafunc</tabstop>
+  <tabstop>loadproj</tabstop>
+  <tabstop>textEdit</tabstop>
+ </tabstops>
  <resources/>
  <connections/>
 </ui>

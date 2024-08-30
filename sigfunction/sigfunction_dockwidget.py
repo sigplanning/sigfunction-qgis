@@ -25,9 +25,11 @@
 
 import os
 from .fv import *
+from .tools import *
 import math
+import numpy
 import numpy as np
-from qgis.core import QgsMapLayerProxyModel,QgsRasterBandStats
+from qgis.core import QgsMapLayerProxyModel,QgsRasterBandStats,QgsApplication, QgsTask, QgsMessageLog,Qgis
 from qgis.PyQt import QtGui, QtWidgets, uic
 from qgis.PyQt.QtCore import pyqtSignal
 from qgis.PyQt.QtGui import QPixmap,QImage, QBrush
@@ -38,6 +40,8 @@ import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib import colors
 from matplotlib.figure import Figure
+from matplotlib.collections import LineCollection
+from matplotlib.colors import ListedColormap, BoundaryNorm
 matplotlib.use("QT5Agg")
 
 #simbologia
@@ -51,17 +55,23 @@ from qgis.core import (
 from qgis.PyQt.QtGui import QColor
 
 
+## raster
+
+from osgeo import gdal
+import subprocess
+import subprocess
+from concurrent.futures import ThreadPoolExecutor
+from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import pyqtSignal, QObject
+from qgis.core import QgsMessageLog, Qgis,QgsProject
+from qgis.gui import (
+    QgsMessageBar,
+)
+from qgis.utils import iface
+
 FORM_CLASS, _ = uic.loadUiType(os.path.join(
     os.path.dirname(__file__), 'sigfunction_dockwidget_base.ui'))
 
-
-### grafica ###
-
-class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width = 5, height= 4,dpi=100):
-        fig = Figure(figsize=(width,height),dpi=dpi)
-        self.axes = fig.add_subplot(111)
-        super().__init__(fig)
 
 class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     closingPlugin = pyqtSignal()
@@ -85,17 +95,18 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         status = False
         self.label_centro_opt.setVisible(status)
         self.v_centro_opt.setVisible(status)
-        self.v_centro_opt_ant.setVisible(status)
+        
         self.label_sat_amp.setVisible(status)
         self.v_sat_amp.setVisible(status)
-        self.v_sat_amp_ant.setVisible(status)
+        
 
         self.v_sat_amp.valueChanged.connect(self.data_fv)
         self.v_centro_opt.valueChanged.connect(self.data_fv)
+        self.guarda_fig.clicked.connect(self.crea_fig)
+        self.creafunc.clicked.connect(self.crea_fv)
 
-        
+
     def min_max(self):
-        
         rlayer = self.r_layer.currentLayer()
         extent = rlayer.extent()
         provider = rlayer.dataProvider()
@@ -109,13 +120,16 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         self.v_min.setText(str(round(value_min,3)))
         self.v_max.setText(str(round(value_max,3)))
         return [value_min,value_max]
-    def plot_g(self,x,y):
+    
+    def plot_g(self,x,y,title=''):
         ## Prueba grafica
-        sr = MplCanvas(self,width=5,height=5,dpi=100)
-        sr.axes.plot(x,y,color='black')
+        lista_colors =  ["#ffee7e", "#faaf3c", "#f35864", "#c9008c", "#691e91"]
+        self.sr = MplCanvas(self,width=7,height=5,dpi=100)
+        self.sr.plot_colored_line(x, y, lista_colors,title)
         if self.layout_graph.count() >0:
            self.layout_graph.removeItem(self.layout_graph.itemAt(0))
-        return self.layout_graph.addWidget(sr)
+        return self.layout_graph.addWidget(self.sr)    
+
     def reset_plot_g(self):
         ## Prueba grafica
         sr = MplCanvas(self,width=5,height=4,dpi=100)
@@ -123,16 +137,17 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
            for i in range(self.layout_graph.count()):
             self.layout_graph.removeItem(self.layout_graph.itemAt(i))
         return self.layout_graph.addWidget(sr)
-
+    def save_fig(self,path):
+        self.sr.fig.savefig(path,dpi=300)
     def reset_selectFV(self):
         self.selectFV.setCurrentIndex(0)
         status = False
         self.label_centro_opt.setVisible(status)
         self.v_centro_opt.setVisible(status)
-        self.v_centro_opt_ant.setVisible(status)
+        
         self.label_sat_amp.setVisible(status)
         self.v_sat_amp.setVisible(status)
-        self.v_sat_amp_ant.setVisible(status)
+        
         self.decreciente.setChecked(False)
         self.reset_plot_g()
 
@@ -167,6 +182,70 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
 
         if not self.r_layer.currentLayer().isValid():
             pass
+    def crea_fig(self):
+        output_fig_graph = graph_version(self.r_layer.currentLayer().source().replace("ifv/ifv_","fv/fi_fv_").replace(".tif",".png"))
+        self.save_fig(output_fig_graph)
+
+    def crea_fv(self):
+        xmin,xmax= self.min_max()
+        X = np.linspace(xmin,xmax,100)
+        input_raster= [self.r_layer.currentLayer().source()]
+        output_raster = fv_version(self.r_layer.currentLayer().source().replace("ifv/ifv_","fv/fv_"))
+        if self.selectFV.currentText()=='Lineal':
+            self.crea_fig()
+            expression = lineal(X,self.decreciente.isChecked(),tool='gcalc')
+            start_raster_calc_task(expression,input_raster,output_raster,self.loadproj.isChecked())
+            
+        elif self.selectFV.currentText()=='Logística':
+            self.crea_fig()
+            ## Path temporal de la capa auxiliar
+            output_raster_aux = fv_version(output_raster.replace("/fv_","/fv_tp1_"))
+            ## calculo de la fv
+            expression=logistica(X,self.v_centro_opt.value(),xmin,xmax,alpha=self.v_sat_amp.value(),dec=self.decreciente.isChecked(),tool='gcalc')
+            start_raster_calc_task(expression,input_raster,output_raster_aux,self.loadproj.isChecked(),notify=False)
+            ## calculo de max y min de la capa de fv y normalizacion para llevarla de 0 a 1 
+            xmin_aux,xmax_aux=min_max_aux(output_raster_aux)
+            X_aux = np.linspace(xmin_aux,xmax_aux,100)
+            expression_normal = lineal(X_aux,tool='gcalc')
+            start_raster_calc_task(expression_normal,[output_raster_aux],output_raster,self.loadproj.isChecked())
+            os.remove(output_raster_aux)
+        elif self.selectFV.currentText()=='Cóncava':
+            self.crea_fig()
+            ## Path temporal de la capa auxiliar
+            output_raster_aux = fv_version(output_raster.replace("/fv_","/fv_tp1_"))
+            expresion= concava(X,xmin,xmax,self.v_sat_amp.value(),dec=self.decreciente.isChecked(),tool='gcalc')
+            start_raster_calc_task(expresion,input_raster,output_raster_aux,self.loadproj.isChecked(),notify=False)
+            ## normalizar
+            xmin_aux,xmax_aux=min_max_aux(output_raster_aux)
+            X_aux = np.linspace(xmin_aux,xmax_aux,100)
+            expression_normal = lineal(X_aux,tool='gcalc')
+            start_raster_calc_task(expression_normal,[output_raster_aux],output_raster,self.loadproj.isChecked())
+            os.remove(output_raster_aux)
+        elif self.selectFV.currentText()=='Convexa':
+            self.crea_fig()
+            ## Path temporal de la capa auxiliar
+            output_raster_aux = fv_version(output_raster.replace("/fv_","/fv_tp1_"))
+            expresion= convexa(X,xmin,xmax,self.v_sat_amp.value(),dec=self.decreciente.isChecked(),tool='gcalc')
+            start_raster_calc_task(expresion,input_raster,output_raster_aux,self.loadproj.isChecked(),notify=False)
+            ## normalizar
+            xmin_aux,xmax_aux=min_max_aux(output_raster_aux)
+            X_aux = np.linspace(xmin_aux,xmax_aux,100)
+            expression_normal = lineal(X_aux,tool='gcalc')
+            start_raster_calc_task(expression_normal,[output_raster_aux],output_raster,self.loadproj.isChecked())
+            os.remove(output_raster_aux)
+        elif self.selectFV.currentText()=='Campana':
+            self.crea_fig()
+            ## Path temporal de la capa auxiliar
+            output_raster_aux = fv_version(output_raster.replace("/fv_","/fv_tp1_"))
+            expresion=campana(X,self.v_centro_opt.value(),xmin,xmax,alpha=self.v_sat_amp.value(),dec=self.decreciente.isChecked(),tool='gcalc')
+            start_raster_calc_task(expresion,input_raster,output_raster_aux,self.loadproj.isChecked(),notify=False)
+            ## normalizar
+            xmin_aux,xmax_aux=min_max_aux(output_raster_aux)
+            X_aux = np.linspace(xmin_aux,xmax_aux,100)
+            expression_normal = lineal(X_aux,tool='gcalc')
+            start_raster_calc_task(expression_normal,[output_raster_aux],output_raster,self.loadproj.isChecked())
+            os.remove(output_raster_aux)
+
 
 
     def data_fv(self):
@@ -175,30 +254,30 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
         X = np.linspace(xmin,xmax,100)
         self.decreciente.setText("Decreciente")
         if self.selectFV.currentText()=='Lineal':
-            
             status = False
             self.v_centro_opt.setValue(round(xmean,1))
             self.label_centro_opt.setVisible(status)
             self.v_centro_opt.setVisible(status)
-            self.v_centro_opt_ant.setVisible(status)
+            
             self.label_sat_amp.setVisible(status)
             self.v_sat_amp.setVisible(status)
-            self.v_sat_amp_ant.setVisible(status)
+            
             Y = lineal(X,self.decreciente.isChecked())
-            self.plot_g(X,Y)
+            self.plot_g(X,Y,f'fv:{self.selectFV.currentText()}, min:{round(xmin,3)}, max:{round(xmax,3)}')
             self.set_style(X,Y)
+
         elif self.selectFV.currentText()=='Logística':
             status = True
             self.label_centro_opt.setVisible(status)
             self.label_centro_opt.setText("Centro")
             self.v_centro_opt.setVisible(status)
-            self.v_centro_opt_ant.setVisible(status)
+            
             self.label_sat_amp.setVisible(status)
             self.label_sat_amp.setText("Saturación")
             self.v_sat_amp.setVisible(status)
-            self.v_sat_amp_ant.setVisible(status)
+            
             Y=logistica(X,self.v_centro_opt.value(),xmin,xmax,alpha=self.v_sat_amp.value(),dec=self.decreciente.isChecked())
-            self.plot_g(X,Y)
+            self.plot_g(X,Y,f'fv:{self.selectFV.currentText()}, min:{round(xmin,3)}, max:{round(xmax,3)}, center: {self.v_centro_opt.value()}, sat: {self.v_sat_amp.value()}')
             self.set_style(X,Y)
 
 
@@ -206,21 +285,21 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             status_=False
             self.label_centro_opt.setVisible(status_)
             self.v_centro_opt.setVisible(status_)
-            self.v_centro_opt_ant.setVisible(status_)
+            
             self.label_sat_amp.setVisible(status_)
             status = True
             self.label_sat_amp.setVisible(status)
             self.label_sat_amp.setText("Saturación")
             self.v_sat_amp.setVisible(status)
-            self.v_sat_amp_ant.setVisible(status)
+            
             if self.selectFV.currentText()=='Convexa':
-                Y= convexa(X,self.v_sat_amp.value(),dec=self.decreciente.isChecked())
-                self.plot_g(X,Y)
+                Y= convexa(X,xmin,xmax,self.v_sat_amp.value(),dec=self.decreciente.isChecked())
+                self.plot_g(X,Y,f'fv:{self.selectFV.currentText()}, min:{round(xmin,3)}, max:{round(xmax,3)}, sat: {self.v_sat_amp.value()}')
                 self.set_style(X,Y)
 
             if self.selectFV.currentText()=='Cóncava':
-                Y= concava(X,self.v_sat_amp.value(),dec=self.decreciente.isChecked())
-                self.plot_g(X,Y)
+                Y= concava(X,xmin,xmax,self.v_sat_amp.value(),dec=self.decreciente.isChecked())
+                self.plot_g(X,Y,f'fv:{self.selectFV.currentText()}, min:{round(xmin,3)}, max:{round(xmax,3)}, sat: {self.v_sat_amp.value()}')
                 self.set_style(X,Y)
 
         elif self.selectFV.currentText()=='Campana': 
@@ -229,13 +308,13 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
             self.label_centro_opt.setText("Óptimo")
             self.label_centro_opt.setVisible(status)
             self.v_centro_opt.setVisible(status)
-            self.v_centro_opt_ant.setVisible(status)
+            
             self.label_sat_amp.setText("Amplitud")
             self.label_sat_amp.setVisible(status)
             self.v_sat_amp.setVisible(status)
-            self.v_sat_amp_ant.setVisible(status)
+            
             Y=campana(X,self.v_centro_opt.value(),xmin,xmax,alpha=self.v_sat_amp.value(),dec=self.decreciente.isChecked())
-            self.plot_g(X,Y)
+            self.plot_g(X,Y,f'fv:{self.selectFV.currentText()}, min:{round(xmin,3)}, max:{round(xmax,3)}, opt: {self.v_centro_opt.value()}, amp: {self.v_sat_amp.value()}')
             self.set_style(X,Y)
         else:
             self.v_centro_opt.setValue(round(xmean,1))
@@ -245,3 +324,135 @@ class SigFunctionDockWidget(QtWidgets.QDockWidget, FORM_CLASS):
     def closeEvent(self, event):
         self.closingPlugin.emit()
         event.accept()
+
+
+################### algebra de mapas################################
+
+def min_max_aux(p_raster_aux):
+
+    rlayer = QgsRasterLayer(p_raster_aux,'')
+    extent = rlayer.extent()
+    provider = rlayer.dataProvider()
+    stats = provider.bandStatistics(1,
+                                    QgsRasterBandStats.All,
+                                    extent,
+                                    0)
+
+    value_min = stats.minimumValue
+    value_max = stats.maximumValue
+    del rlayer
+    return [value_min,value_max]
+
+
+def cargar_capa_grupo(ruta,nombre_grupo):
+    index_capa = 0
+    proyecto = QgsProject.instance()
+    root = proyecto.layerTreeRoot()
+    n_groups = []
+    for group in root.findGroups():
+        n_groups.append(group.name())
+    if 'fv' not in n_groups:
+        group = root.insertGroup(-1, nombre_grupo)
+    else:
+        for group in root.findGroups():
+            if group.name()== 'fv':
+                nombre = nombre_capa(ruta).split(".")[0]
+                rlayer = QgsRasterLayer(ruta,nombre)
+                proyecto.addMapLayer(rlayer,False)
+                group.insertLayer(index_capa, rlayer)
+
+
+
+def run_gdal_calc(expression, input_rasters, output_raster):
+    try:
+        cmd = [
+            "gdal_calc",
+            "-A", input_rasters[0],
+            "--outfile=" + output_raster,
+            "--calc=" + expression,
+            "--co=" +'COMPRESS=DEFLATE'
+        ]
+        if len(input_rasters) > 1:
+            for i, raster in enumerate(input_rasters[1:], start=66):  # Empieza desde ASCII 'B'
+                cmd.extend([f"-{chr(i)}", raster])
+
+        process = subprocess.Popen(cmd, 
+                                   stdout=subprocess.PIPE, 
+                                   stderr=subprocess.PIPE,
+                                   universal_newlines=True,
+                                   creationflags=subprocess.CREATE_NO_WINDOW)
+        stdout, stderr = process.communicate()
+        return process.returncode, stdout, stderr
+
+
+    except Exception as e:
+        return -1, "", str(e)
+
+def start_raster_calc_task(expression,input_rasters,output_raster,carga_capa,notify=True):
+
+    with ThreadPoolExecutor(max_workers=1) as executor:
+        future = executor.submit(run_gdal_calc, expression, input_rasters, output_raster)
+
+        try:
+            returncode, stdout, stderr = future.result()
+
+            if returncode == 0:
+                if notify:
+                    QgsMessageLog.logMessage("SIGfunction", "Mapa de fv creado exitosamente", level=Qgis.Info)
+                    iface.messageBar().pushMessage("SIGfunction", "Mapa de fv creado exitosamente", level=Qgis.Success,duration=10)
+                    if carga_capa:
+                        cargar_capa_grupo(output_raster,'fv')
+                
+            else:
+                QgsMessageLog.logMessage(f"El proceso fallo: {stderr}", level=Qgis.Critical)
+                iface.messageBar().pushMessage("SIGfunction", f"El proceso fallo: {stderr}", level=Qgis.Critical,duration=10)
+
+        except Exception as e:
+            QgsMessageLog.logMessage(f"Error al ejecutar: {str(e)}", level=Qgis.Critical)
+            QMessageBox.critical(None, "Error", f"Error al ejecutar: {str(e)}")
+            iface.messageBar().pushMessage("SIGfunction", f"Error al ejecutar: {str(e)}", level=Qgis.Critical,duration=10)
+
+
+####################### grafica ###################################
+def rgba_to_hex(rgba):
+    # Asegúrate de que los valores estén en el rango [0, 255]
+    r, g, b, a = rgba
+    return '#{:02x}{:02x}{:02x}{:02x}'.format(r, g, b, a)
+class MplCanvas(FigureCanvasQTAgg):
+    def __init__(self, parent=None, width = 7, height= 5,dpi=100):
+        self.fig = Figure(figsize=(width,height),dpi=dpi)
+        self.axes = self.fig.add_subplot(111)
+        super().__init__(self.fig)
+
+    def plot_colored_line(self, x, y, list_colors,txt_title=''):
+        cmap =  colors.LinearSegmentedColormap.from_list("fv", ["#ffee7e","#faaf3c","#f35864","#c9008c","#691e91"], N=100)
+        # Crear los segmentos de la línea para la LineCollection
+        points = np.array([x, y]).T.reshape(-1, 1, 2)
+        segments = np.concatenate([points[:-1], points[1:]], axis=1)
+        # Crear un array de colores basado en los valores de 'y'
+        norm = BoundaryNorm(np.linspace(min(y), max(y), cmap.N + 1), cmap.N)
+        # Crear la colección de líneas
+        lc = LineCollection(segments, cmap=cmap, norm=norm)
+        lc.set_array(y)
+        lc.set_linewidth(2)
+        # Añadir la colección al subplot
+        self.axes.add_collection(lc)
+        ymin, ymax = self.axes.get_ylim()  # Obtener los límites del eje Y
+        self.axes.text(x=-0.40, y=ymin-0.07, s='Peor condición', ha='left', color='black', transform=self.axes.transAxes)
+        self.axes.text(x=-0.40, y=ymax+0.05, s='Mejor condición', ha='left', color='black', transform=self.axes.transAxes)
+
+        for i, color_ind in enumerate(y):
+                    rgba = [int(round(255*v, 0)) for v in cmap(color_ind)]
+                    self.axes.plot([], [], color=rgba_to_hex(rgba))
+        self.fig.subplots_adjust(left=0.275)
+        # Mostrar solo los ejes izquierdo e inferior
+        self.axes.spines['top'].set_visible(False)    # Oculta el borde superior
+        self.axes.spines['right'].set_visible(False)  # Oculta el borde derecho
+        # Muestra los ejes izquierdo e inferior
+        self.axes.spines['left'].set_visible(True)
+        self.axes.spines['bottom'].set_visible(True)
+        # Agregar un título a la gráfica
+        self.fig.subplots_adjust(left=0.275,top=0.80)
+        self.axes.set_title(txt_title,fontsize=8,y=1.1,pad=10,loc='left',x=-0.2)
+        
+        self.draw()
